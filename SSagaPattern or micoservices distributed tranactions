@@ -1,0 +1,74 @@
+CCMS Publishing Workflow – Failure Handling (Saga Style)
+Step 1: User Requests Publish (via REST API)
+
+Failure Point: Request validation fails (invalid metadata, wrong version).
+
+Compensation: Reject immediately with error response → no workflow started → nothing else to roll back.
+
+Step 2: Decide Which DB to Query (Legacy CCMS DB vs New CCMS DB)
+
+Failure Point: DB unavailable / query fails.
+
+Compensation:
+
+Update publishing job status = FAILED.
+
+Send Kafka event → notify failure.
+
+No files are touched, rendering never starts.
+
+Step 3: Download XML Files (Spring Batch → OCI Object Storage)
+
+Failure Point: Some/all of 4K–6K XML files fail to download.
+
+Compensation:
+
+Mark publishing job = FAILED.
+
+Delete any partial files from OCI bucket (clean-up job).
+
+Notify downstream services not to proceed.
+
+Step 4: Notify Rendering Service (Kafka Event)
+
+Failure Point: Kafka message not delivered / rendering service down.
+
+Compensation:
+
+Retry sending event (Kafka handles durable delivery, but you may have retry logic).
+
+If retries fail, mark publishing = FAILED.
+
+Notify user → "publishing could not be completed."
+
+Step 5: Rendering Service Processes Files
+
+Failure Point: Rendering fails (e.g., transformation error, missing file).
+
+Compensation:
+
+Send rendering failed event via Kafka.
+
+Publishing job marked as FAILED.
+
+Optionally keep files in OCI for debugging.
+
+Step 6: Status Update Service
+
+Failure Point: Final status (success/failure) could not be updated in DB.
+
+Compensation:
+
+Retry DB update until successful.
+
+If DB permanently down → message stored in dead-letter queue (DLQ) for later recovery.
+
+Ensure no duplicate “success” and “failure” statuses are written.
+
+🎯 How to Explain in Interview (Soundbite)
+
+"In our CCMS publishing workflow, each step was treated as part of a Saga. For example, if downloading 6K XML files failed, the compensating action was to clean up partial files in OCI storage and mark the job as failed in the DB, so downstream rendering would never start. If rendering itself failed, we updated the publishing status and notified the user but kept files for debugging. The principle was: don’t try to enforce strict rollback across services, but ensure that the system always ends in a consistent state. This approach gave us reliability without heavy 2-phase commit overhead."
+
+✅ This shows you deeply understand distributed transactions, compensation, eventual consistency, and Kafka-based orchestration.
+
+Do you want me to also map this into a simple Saga diagram (ASCII/text) you can sketch quickly in an interview whiteboard?
