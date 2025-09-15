@@ -1,0 +1,30 @@
+Most of us can create a working API… but writing a good API is different.
+Here are some practices which are not very common but very powerful:
+
+1️⃣ Use DTOs (Data Transfer Objects)
+👉 Don’t expose entity classes directly.
+👉 It protects your DB structure and avoids tight coupling.
+
+2️⃣ Version Your APIs (v1, v2, …)
+👉 Never break existing clients.
+👉 Always provide backward compatibility.
+
+3️⃣ Meaningful Status Codes
+👉 Not just 200 or 500 😅
+👉 Use 201 (Created), 204 (No Content), 400 (Bad Request), 404 (Not Found), 409 (Conflict).
+
+4️⃣ Idempotency in POST APIs
+👉 Avoid duplicate processing if clients retry requests.
+👉 Use unique request IDs or tokens.
+
+5️⃣ Validation + Exception Handling Layer
+👉 Centralized exception handler (@ControllerAdvice in Spring Boot).
+👉 Never leak stack traces to clients.
+
+6️⃣ Logging with Context
+👉 Add requestId, userId in logs.
+👉 Helps debugging in microservices.
+
+7️⃣ Security by Default
+👉 Use JWT/OAuth2.
+👉 Don’t pass sensitive data in URL params.
